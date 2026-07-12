@@ -1,0 +1,51 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Unit test / coverage reports
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Qdrant local storage (if using embedded mode)
+qdrant_storage/
+
+# MCP uploads or temp files
+uploads/
+tmp/
+data/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
