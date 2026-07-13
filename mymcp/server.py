@@ -1,4 +1,5 @@
 import os
+import uuid
 from mcp.server.fastmcp import FastMCP
 # Create an MCP server
 mcp = FastMCP("Demo", json_response=True)
@@ -30,23 +31,33 @@ def handle_upload(input):
     vectors = [get_embedding(doc.page_content) for doc in chunks]
 
     insert_collection(
-        ids=list(range(len(vectors))),
+        ids=[str(uuid.uuid4()) for _ in vectors],
         payload=[{"text": doc.page_content} for doc in chunks],
         vectors=vectors
     )
 
     return {"status": f"Uploaded {len(chunks)} chunks from {len(input['files'])} files"}
 
-@mcp.tool()
-def handle_search(msg):
-    query_vector = get_embedding(msg)
+@mcp.tool(
+    name="search_docs",
+    description="Search the uploaded documents using semantic search and return the most relevant passages."
+)
+def handle_search(query: str) -> list[str]:
+    """
+        Search uploaded documents for information relevant to the user's question.
+
+        Args:
+            query: Natural language search query.
+
+        Returns:
+            List of matching document chunks.
+    """
+    query_vector = get_embedding(query)
     results = search_collection(query_vector)
     print(f"Search results: {results}")
     return results["results"]
 
 create_collection()
-# inputs = get_info()
-# handle_upload(inputs)
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")

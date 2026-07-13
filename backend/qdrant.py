@@ -29,5 +29,4 @@ def search_collection(query_vector, collection_name='mylocal', limit=4):
             query=query_vector,
             limit=limit
         )
-    print(f"Search results: {rs}")
     return {"results": [point.payload["text"] for point in rs.points]}
