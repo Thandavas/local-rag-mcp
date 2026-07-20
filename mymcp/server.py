@@ -29,10 +29,17 @@ def handle_upload(input):
 
     chunks = get_chunks(input["files"])
     vectors = [get_embedding(doc.page_content) for doc in chunks]
-
+    
+    payloads = []
+    for doc in chunks:
+        filename = doc.metadata.get("source", "unknown_file") 
+        payloads.append({
+                "text": doc.page_content,
+                "filename": filename 
+            })
     insert_collection(
         ids=[str(uuid.uuid4()) for _ in vectors],
-        payload=[{"text": doc.page_content} for doc in chunks],
+        payload=payloads,
         vectors=vectors
     )
 
