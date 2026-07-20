@@ -29,5 +29,16 @@ def search_collection(query_vector, collection_name='mylocal', limit=4):
             query=query_vector,
             limit=limit
         )
-    print(f"Search results: {rs}")
     return {"results": [point.payload["text"] for point in rs.points]}
+
+def get_processed_filenames(collection_name='mylocal') -> list[str]:
+    # Use the Facet API to extract unique values from the 'filename' payload key
+    facet_result = client.facet(
+        collection_name=collection_name,
+        key="filename",
+        exact=True,     # Forces an exact match scan for 100% precision
+        limit=500       # Adjust based on how many unique files you expect to track
+    )
+    
+    # Extract just the string names from the facet hits
+    return [hit.value for hit in facet_result.hits]

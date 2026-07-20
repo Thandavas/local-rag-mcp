@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini MCP Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js for beautiful markdown rendering of code/lists -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 flex flex-col h-screen font-sans antialiased selection:bg-blue-600/30">
+
+    <!-- Header -->
+    <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between shadow-lg backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></div>
+            <h1 class="text-lg font-semibold tracking-tight text-gray-100 flex items-center gap-2">
+                <span>🤖</span> Gemini MCP Hub
+            </h1>
+        </div>
+        <span class="text-xs font-mono bg-gray-800 text-gray-400 px-2.5 py-1 rounded-full border border-gray-700">gemini-2.5-flash</span>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <main class="flex-1 overflow-hidden flex max-w-7xl w-full mx-auto p-4 gap-4">
+        
+        <!-- Left Pane: Document Upload Area -->
+        <section class="w-80 bg-gray-900 rounded-xl border border-gray-800 flex flex-col overflow-hidden shadow-2xl hidden md:flex">
+            <div class="p-4 border-b border-gray-800 bg-gray-900/50">
+                <h2 class="text-sm font-medium text-gray-300 flex items-center gap-2">
+                    📁 Context Management
+                </h2>
+            </div>
+            
+            <div class="p-4 flex-1 flex flex-col gap-4 overflow-y-auto">
+                <!-- Drag & Drop Zone -->
+                <div id="drop-zone" class="border-2 border-dashed border-gray-700 hover:border-blue-500/50 bg-gray-900/30 hover:bg-blue-950/10 rounded-lg p-6 text-center cursor-pointer transition-all group flex flex-col items-center justify-center min-h-[160px]">
+                    <input type="file" id="file-input" class="hidden" multiple accept=".pdf,.txt,.docx,.json,.md">
+                    <span class="text-3xl mb-2 group-hover:scale-110 transition-transform">📤</span>
+                    <p class="text-sm font-medium text-gray-300">Click or Drag Files</p>
+                    <p class="text-xs text-gray-500 mt-1">PDF, TXT, DOCX, JSON, MD</p>
+                </div>
+
+                <!-- Selected Files List Container -->
+                <div class="flex-1 flex flex-col min-h-0">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Selected Files</p>
+                    <div id="files-list" class="flex-1 overflow-y-auto space-y-2 text-sm text-gray-400 italic">
+                        No files staged for upload.
+                    </div>
+                </div>
+                
+                <button id="upload-btn" disabled class="w-full py-2.5 px-4 bg-gray-800 border border-gray-700 text-gray-400 font-medium rounded-lg text-sm transition-all cursor-not-allowed">
+                    Upload Staged Files
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Pane: Active Chat System -->
+        <section class="flex-1 flex flex-col bg-gray-900 rounded-xl border border-gray-800 shadow-2xl overflow-hidden">
+            <!-- Chat Window -->
+            <div id="chat-window" class="flex-1 overflow-y-auto p-6 space-y-4">
+                <div class="flex justify-start">
+                    <div class="bg-gray-800/60 text-gray-300 p-4 rounded-xl max-w-xl border border-gray-800 shadow-sm leading-relaxed">
+                        Hello! Ask me anything about your infrastructure or documents. If you have files to process, stage them in the file panel on the left!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Bar Interface -->
+            <footer class="p-4 bg-gray-900/80 border-t border-gray-800 backdrop-blur-md">
+                <form id="chat-form" class="flex gap-3 items-center">
+                    <div class="flex-1 relative bg-gray-800 rounded-xl border border-gray-700 shadow-inner focus-within:border-blue-500 transition-colors">
+                        <input 
+                            type="text" 
+                            id="user-input" 
+                            placeholder="Ask a question (e.g., What does the document say about ISTQB?)..." 
+                            class="w-full bg-transparent text-gray-100 p-4 pr-12 focus:outline-none placeholder-gray-500 text-sm"
+                            required
+                            autocomplete="off"
+                        >
+                    </div>
+                    <button 
+                        type="submit" 
+                        id="send-btn" 
+                        class="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium p-4 rounded-xl shadow-lg shadow-blue-600/10 transition-all flex items-center justify-center aspect-square"
+                        title="Send Message"
+                    >
+                        <svg class="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                    </button>
+                </form>
+            </footer>
+        </section>
+    </main>
+
+    <!-- UI State Handling Actions -->
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const filesList = document.getElementById('files-list');
+        const uploadBtn = document.getElementById('upload-btn');
+
+        let stagedFiles = [];
+
+        // --- File System Interface Logic ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500', 'bg-blue-950/20');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500', 'bg-blue-950/20');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-950/20');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            for (let file of files) {
+                if (!stagedFiles.some(f => f.name === file.name)) {
+                    stagedFiles.push(file);
+                }
+            }
+            updateFilesList();
+        }
+
+        function updateFilesList() {
+            if (stagedFiles.length === 0) {
+                filesList.innerHTML = `<span class="italic text-gray-600">No files staged for upload.</span>`;
+                uploadBtn.disabled = true;
+                uploadBtn.className = "w-full py-2.5 px-4 bg-gray-800 border border-gray-700 text-gray-500 font-medium rounded-lg text-sm transition-all cursor-not-allowed";
+                return;
+            }
+
+            filesList.innerHTML = '';
+            stagedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2 bg-gray-800/50 rounded-md border border-gray-800 group animate-fade-in";
+                item.innerHTML = `
+                    <span class="truncate pr-2 text-gray-300 max-w-[180px] font-mono text-xs">${file.name}</span>
+                    <button class="text-gray-500 hover:text-red-400 text-xs transition-colors p-1" onclick="removeFile(${index})">✕</button>
+                `;
+                filesList.appendChild(item);
+            });
+
+            uploadBtn.disabled = false;
+            uploadBtn.className = "w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium rounded-lg text-sm shadow-md transition-all cursor-pointer";
+        }
+
+        window.removeFile = function(index) {
+            stagedFiles.splice(index, 1);
+            updateFilesList();
+        };
+
+        // Simulated Context Document Upload Workflow
+        uploadBtn.addEventListener('click', async () => {
+            if (stagedFiles.length === 0) return;
+            
+            const formData = new FormData();
+            stagedFiles.forEach(file => formData.append('files', file));
+            
+            // Set Upload UI Status State
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = "Uploading...";
+            
+            try {
+                // Adjust route to match your active FastAPI file receiver endpoint if available
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json(); 
+                    const fileCount = data.count
+                    if (data.saved_files && data.saved_files.length > 0) {
+                        // Formats as: "file1.pdf, file2.txt"
+                        fileListText = `\nFiles: ${data.saved_files.join(', ')}`;
+                    }
+                    appendMessage(
+                        `✅ Successfully uploaded ${fileCount} file(s) into system session context.${fileListText}`, 
+                        false
+                    );
+                    stagedFiles = [];
+                    updateFilesList();
+                } else {
+                    throw new Error('Upload target structural failure');
+                }
+            } catch (err) {
+                console.error(err);
+                appendMessage("❌ Failed to push files to target backend destination API.", false);
+            } finally {
+                uploadBtn.textContent = "Upload Staged Files";
+                updateFilesList();
+            }
+        });
+
+        // --- Chat Stream Lifecycle Execution ---
+        function appendMessage(text, isUser = false, isStatus = false) {
+            const wrapper = document.createElement('div');
+            wrapper.className = isUser ? "flex justify-end w-full" : "flex justify-start w-full";
+            
+            const msgBubble = document.createElement('div');
+            if (isUser) {
+                msgBubble.className = "bg-blue-600 text-white p-3.5 px-4 rounded-2xl max-w-xl shadow-md text-sm leading-relaxed rounded-br-none";
+                msgBubble.textContent = text;
+            } else if (isStatus) {
+                msgBubble.className = "bg-gray-900 text-amber-400 text-xs font-mono p-2 px-3 rounded-lg border border-gray-800 flex items-center gap-2 shadow-inner animate-pulse";
+                msgBubble.textContent = text;
+            } else {
+                msgBubble.className = "bg-gray-800/80 text-gray-200 p-4 rounded-2xl max-w-xl border border-gray-800 shadow-md text-sm leading-relaxed prose prose-invert rounded-bl-none overflow-x-auto";
+                // Uses marked parsing engine to handle rich formatting gracefully inside container block
+                msgBubble.innerHTML = marked.parse(text);
+            }
+            
+            wrapper.appendChild(msgBubble);
+            chatWindow.appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return msgBubble;
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = userInput.value.trim();
+            if (!query) return;
+
+            appendMessage(query, true);
+            userInput.value = '';
+            
+            userInput.disabled = true;
+            sendBtn.disabled = true;
+            sendBtn.className = "bg-gray-800 text-gray-600 p-4 rounded-xl cursor-not-allowed border border-gray-800 shadow-none";
+
+            let currentStatusBubble = appendMessage("Initializing connection...", false, true);
+
+            const eventSource = new EventSource(`/chat/stream?q=${encodeURIComponent(query)}`);
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'status') {
+                    currentStatusBubble.textContent = `⚙️ ${data.content}`;
+                } 
+                else if (data.type === 'final') {
+                    eventSource.close();
+                    currentStatusBubble.remove();
+                    appendMessage(data.content, false);
+                    
+                    userInput.disabled = false;
+                    sendBtn.disabled = false;
+                    sendBtn.className = "bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium p-4 rounded-xl shadow-lg shadow-blue-600/10 transition-all flex items-center justify-center aspect-square";
+                }
+            };
+
+            eventSource.onerror = function(err) {
+                console.error("EventSource lifecycle broken:", err);
+                eventSource.close();
+                currentStatusBubble.remove();
+                appendMessage("❌ An error interrupted data synchronization with backend worker execution pipeline.", false);
+                
+                userInput.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.className = "bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-medium p-4 rounded-xl shadow-lg shadow-blue-600/10 transition-all flex items-center justify-center aspect-square";
+            };
+        });
+    </script>
+</body>
+</html>
