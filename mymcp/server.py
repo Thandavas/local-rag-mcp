@@ -12,21 +12,31 @@ sys.path.insert(0, str(BASE_DIR))
 from backend.qdrant import create_collection
 from backend.embedding import get_embedding
 from backend.chunking import get_chunks
-from backend.qdrant import insert_collection , search_collection
+from backend.qdrant import insert_collection , search_collection ,get_processed_filenames
 
-def get_info():
+def get_info(fname):
     input_data = {}
+    input_data["files"] = []
     pdf_dir = "data/documents/"
-    pdf_files = [
-        pdf_dir+f for f in os.listdir(pdf_dir)
-        if f.lower().endswith(".pdf")
-    ]
-    input_data["files"] = pdf_files
+    for f in os.listdir(pdf_dir):
+        if f.lower().endswith(".pdf"):
+            if f.lower() == fname.lower():
+                input_data["files"].append(pdf_dir+f)
+                break
+        else:
+            raise ValueError(f"File {fname} is not a PDF.")
+
     return input_data
 
-@mcp.tool()
+@mcp.tool(
+    name="process_docs",
+    description="Process the uploaded documents and store them in the vector database."
+)
 def handle_upload(input):
-
+    input=get_info(input)
+    for f in input["files"]:
+        if f in get_processed_filenames():
+            return {"status": f"File {f} has already been processed. Skipping."}
     chunks = get_chunks(input["files"])
     vectors = [get_embedding(doc.page_content) for doc in chunks]
     
