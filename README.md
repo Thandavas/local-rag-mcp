@@ -46,7 +46,3 @@ Follow these steps to get the project running locally:
 - If you are using PowerShell, the activation command above is the correct one.
 - The backend provides the local web interface, while the MCP server handles the retrieval workflow.
 - This repo currently only supports the `google-genai` client for model access.
-
-- Run the commands from the project root folder.
-- If you are using PowerShell, the activation command above is the correct one.
-- The backend provides the local web interface, while the MCP server handles the retrieval workflow.
